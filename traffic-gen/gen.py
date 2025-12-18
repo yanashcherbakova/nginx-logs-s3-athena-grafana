@@ -26,21 +26,21 @@ USER_AGENTS = [
 ]
 
 paths = [
-    ("/", 0.22),
-    ("/products", 0.14),
-    ("/product/101", 0.08),
-    ("/product/102", 0.06),
-    ("/search?q=shoes", 0.06),
+    ("/", 0.20),
+    ("/products", 0.13),
+    ("/product/101", 0.07),
+    ("/product/102", 0.05),
+    ("/search?q=shoes", 0.05),
     ("/search?q=bag", 0.04),
     ("/cart", 0.05),
     ("/checkout", 0.02),
     ("/login", 0.03),
     ("/logout", 0.01),
-    ("/api/products?page=1", 0.08),
+    ("/api/products?page=1", 0.07),
     ("/api/products?page=2", 0.04),
-    ("/api/product?id=101", 0.05),
+    ("/api/product?id=101", 0.04),
     ("/api/product?id=102", 0.03),
-    ("/api/orders", 0.06),
+    ("/api/orders", 0.05),
     ("/api/orders?page=1", 0.02),
     ("/api/orders?page=2", 0.01),
     ("/favicon.ico", 0.03),
@@ -48,7 +48,15 @@ paths = [
     ("/sitemap.xml", 0.01),
     ("/healthz", 0.02),
     ("/api/missing", 0.02),
-    ("/wp-login.php", 0.01)
+
+    ("/admin", 0.006),
+    ("/admin/login", 0.004),
+    ("/internal/metrics", 0.003),
+    ("/.env", 0.003),
+    ("/.git/config", 0.002),
+    ("/wp-login.php", 0.004),
+    ("/phpmyadmin", 0.002),
+    ("/api/rate_limited", 0.004)
 ]
 
 def pick_path():
@@ -63,3 +71,8 @@ def pick_path():
 while True:
     p = pick_path()
     try:
+        ua = random.choice(USER_AGENTS)
+        requests.get(BASE_URL + p, headers={"User-Agent": ua}, timeout=2)
+    except Exception:
+        pass
+    time.sleep(1.0 / max(QPS, 0.1))
