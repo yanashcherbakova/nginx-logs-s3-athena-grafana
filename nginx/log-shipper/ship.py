@@ -4,6 +4,7 @@ import json
 import gzip
 import uuid
 import datetime
+import time
 
 import boto3
 
@@ -19,6 +20,9 @@ READ_CHUNK_BYTES = 256 * 1024
 
 upload_every_sec = 60
 poll_every_sec = 2 
+
+if not S3_BUCKET:
+    raise SystemExit("S3_Bucket is required")
 
 logging.basicConfig(
     level="INFO", 
@@ -40,7 +44,7 @@ def load_offset():
     
 def save_offset(offset):
     tmp = STATE_PATH + ".tmp"
-    with open(tmp, "w", encoding="etf-8") as f:
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump({"offset": offset}, f)
     os.replace(tmp, STATE_PATH)
 
@@ -48,7 +52,7 @@ def gzip_jsonl(lines):
     cleaned_lines = []
 
     for l in lines:
-        if not l.strip:
+        if not l.strip():
             continue
         cleaned_l = l.rstrip(b"\n")
         cleaned_lines.append(cleaned_l)
@@ -75,6 +79,7 @@ def main():
 
     buf_lines = []
     buf_bytes = 0
+    flush_started_at = time.time()
 
     logger.info("start with offset=%d", offset)
     logger.info("target s3 bucket=%s", S3_BUCKET)
@@ -82,9 +87,14 @@ def main():
 
     while True:
         try:
+            size=os.path.getsize(LOG_PATH)
+            if offset > size:
+                logger.warning("log truncated or rotated: offset=%d size=%d", offset, size)
+                offset = 0
+
             with open(LOG_PATH, "rb") as f:
                 f.seek(offset)
-                chunk = f.read()
+                chunk = f.read(READ_CHUNK_BYTES)
                 offset = f.tell()
 
             if chunk:
@@ -97,7 +107,10 @@ def main():
         except Exception:
             logger.exception("tail error")
 
-        if buf_lines:
+        time_due = (time.time() - flush_started_at) >= upload_every_sec
+        size_due = buf_bytes >= MAX_BUFFER_BYTES
+
+        if buf_lines and (time_due or size_due):
             key = s3_key(utcnow())
             try:
                 body = gzip_jsonl(buf_lines)
@@ -107,8 +120,14 @@ def main():
                 logger.info("uploaded s3://%s/%s lines=%d bytes_gz=%d offset=%d",
                             S3_BUCKET, key, len(buf_lines), len(body), offset)
                 
+                buf_lines.clear()
+                buf_bytes = 0
+                flush_started_at = time.time()
+                
             except Exception:
                 logger.exception("upload error")
+
+        time.sleep(poll_every_sec)
 
 if __name__ == "__main__":
     main()

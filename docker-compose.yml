@@ -8,7 +8,7 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - nginx_logs:/var/log/nginx
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/healthz"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
       interval: 5s
       timeout: 2s
       retries: 10
@@ -25,7 +25,7 @@ services:
     restart: unless-stopped
 
   log-shipper:
-    build: ./log-shipper
+    build: ./nginx/log-shipper
     container_name: log-shipper
     environment:
       - AWS_REGION=${AWS_REGION}
