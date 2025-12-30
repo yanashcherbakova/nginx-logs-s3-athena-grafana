@@ -8,8 +8,8 @@ import time
 
 import boto3
 
-LOG_PATH = os.getenv("LOG_PATH", "/var/log/nginx/access.log")
-STATE_PATH = os.getenv("STATE_PATH", "/var/log/nginx/.shipper_state.json")
+LOG_PATH = os.getenv("LOG_PATH", "/var/log/nginx_files/access.jsonl")
+STATE_PATH = os.getenv("STATE_PATH", "/var/log/nginx_files/.shipper_state.json")
 
 AWS_REGION = os.getenv("AWS_REGION")
 S3_BUCKET = os.getenv("S3_BUCKET")
