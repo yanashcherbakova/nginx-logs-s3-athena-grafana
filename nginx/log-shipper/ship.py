@@ -1,6 +1,9 @@
 import os
 import logging
 import json
+import gzip
+import uuid
+import datetime
 
 import boto3
 
@@ -34,6 +37,37 @@ def load_offset():
             return int(json.load(f).get("offset", 0))
     except Exception:
         return 0
+    
+def save_offset(offset):
+    tmp = STATE_PATH + ".tmp"
+    with open(tmp, "w", encoding="etf-8") as f:
+        json.dump({"offset": offset}, f)
+    os.replace(tmp, STATE_PATH)
+
+def gzip_jsonl(lines):
+    cleaned_lines = []
+
+    for l in lines:
+        if not l.strip:
+            continue
+        cleaned_l = l.rstrip(b"\n")
+        cleaned_lines.append(cleaned_l)
+
+    body = b"\n".join(cleaned_lines)
+    body += b"\n"
+
+    compressed_body = gzip.compress(body)
+    return compressed_body
+
+
+def utcnow():
+    return datetime.datetime.now(datetime.timezone.utc)
+
+def s3_key(now):
+    return (
+        f"{S3_PREFIX}/year={now:%Y}/month={now:%m}/day={now:%d}/hour={now:%H}/"
+        f"access_{now:%Y%m%dT%H%M%SZ}_{uuid.uuid4().hex}.jsonl.gz"
+    )
 
 def main():
     s3 = build_s3()
@@ -62,3 +96,19 @@ def main():
             pass
         except Exception:
             logger.exception("tail error")
+
+        if buf_lines:
+            key = s3_key(utcnow())
+            try:
+                body = gzip_jsonl(buf_lines)
+                s3.put_object(Bucket=S3_BUCKET, Key= key, Body = body)
+                save_offset(offset)
+
+                logger.info("uploaded s3://%s/%s lines=%d bytes_gz=%d offset=%d",
+                            S3_BUCKET, key, len(buf_lines), len(body), offset)
+                
+            except Exception:
+                logger.exception("upload error")
+
+if __name__ == "__main__":
+    main()
