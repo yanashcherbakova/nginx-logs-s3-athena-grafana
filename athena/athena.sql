@@ -10,7 +10,6 @@ CREATE EXTERNAL TABLE IF NOT EXISTS nginx_logs.access_logs (
   referer string,
   request_id string,
   bytes_sent bigint,
-  user_id string,
   request_time double,
   user_agent string,
   session_id string
