@@ -131,6 +131,8 @@ INFO | uploaded s3://nginx-logs-s3-grafana-dev/nginx_access_logs/year=2025/month
 - **Grafana** will query Athena, not S3 directly.
 - Create db / table / partitions with `athena/athena.sql`
 
+![alt text](pic/table.png)
+
 ### 🟥 7. Grafana setup
 
 - Open **Grafana** `http://localhost:3000` (Credentials are defined in `docker-compose.yml`)
